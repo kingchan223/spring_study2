@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 @WebServlet(name="frontControllerServletV5", urlPatterns="/front-controller/v5/*")
-public class FrontControllerServletV5 extends HttpServlet {
+public class FrontControllerServletV5 extends HttpServlet{
 
     // 다 지원하기 위해서 Object가 들어간다.
     private final Map<String, Object> handlerMappingMap = new HashMap<>();
@@ -41,33 +41,39 @@ public class FrontControllerServletV5 extends HttpServlet {
         handlerMappingMap.put("/front-controller/v5/v4/members/new-form", new MemberFormControllerV4());
         handlerMappingMap.put("/front-controller/v5/v4/members/save", new MemberSaveControllerV4());
         handlerMappingMap.put("/front-controller/v5/v4/members", new MemberListControllerV4());
-    }
-
+    } //컨트롤러들을 handlerMappingMap에 담아준다.
     private void initHandlerAdapters() {
         handlerAdapters.add(new ControllerV3HandlerAdapter());
         handlerAdapters.add(new ControllerV4HandlerAdapter());
-    }
+    } //어댑터들을 handlerAdapters에 담아준다.
 
     @Override
     protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 
-        //핸들러 찾아오기
+        // 1.handler 찾아오기
         Object handler = getHandler(request);
-
         if(handler==null){
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
         }
 
-        //어댑터 찾아오기
+        // 2.handler 처리할 수 있는 adapter 찾아오기
         MyHandlerAdapter adapter = getHandlerAdapter(handler);
 
+        // 3.adapter를 통해 handler실행(ModelView반환)
         ModelView mv = adapter.handle(request, response, handler);
 
+        // 4.viewResolver호출해서 MyView받기
         String viewName = mv.getViewName(); //논리 이름 ex) new-form
         MyView view = viewResolver(viewName);
+
+        // 5.MyView로 렌더링
         view.render(mv.getModel(),request, response);
     }
 
+    private Object getHandler(HttpServletRequest request) {
+        String requestURI = request.getRequestURI();
+        return handlerMappingMap.get(requestURI);
+    }
     private MyHandlerAdapter getHandlerAdapter(Object handler) {
         for (MyHandlerAdapter adapter : handlerAdapters) {
             if(adapter.support(handler)){
@@ -76,12 +82,6 @@ public class FrontControllerServletV5 extends HttpServlet {
         }
         throw new IllegalArgumentException("No handler adapter.   handler="+handler);
     }
-
-    private Object getHandler(HttpServletRequest request) {
-        String requestURI = request.getRequestURI();
-        return handlerMappingMap.get(requestURI);
-    }
-
     private MyView viewResolver(String viewName) {
         return new MyView("/WEB-INF/views/" + viewName + ".jsp");
     }
